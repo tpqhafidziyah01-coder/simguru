@@ -7,11 +7,40 @@
   var API_URL = 'https://uylmaybxbiughmdjhipq.supabase.co/functions/v1/api';
   var BATAS_WAKTU_MS = 60000;
 
+  // ---------- Token sesi ----------
+  // doLogin sekarang sekaligus membuat sesi: tokennya disimpan di sini lalu ke localStorage (sim_sesi).
+  var tokenBaru = null;
+  function tokenSesi() {
+    if (tokenBaru) return tokenBaru;
+    try { return localStorage.getItem('sim_sesi') || ''; } catch (e) { return ''; }
+  }
+
   // ---------- Fungsi yang dijawab langsung di browser (tanpa server) ----------
+  // Mengembalikan undefined = tidak dijawab di sini, teruskan ke server.
   var lokal = {
     // Dulu: ScriptApp.getService().getUrl(). Sekarang: alamat halaman ini.
     getUrlWebApp: function () {
       return { status: 'success', url: location.origin + location.pathname };
+    },
+    // index.html memanggil buatSesiLogin tepat setelah login. Sesinya sudah dibuat oleh doLogin,
+    // jadi cukup dijawab dengan token itu (lebih cepat, dan tidak ada sesi ganda).
+    buatSesiLogin: function () {
+      if (!tokenBaru) return undefined;
+      var t = tokenBaru;
+      tokenBaru = null;
+      return { status: 'success', token: t };
+    }
+  };
+
+  // Pengolahan hasil dari server sebelum diberikan ke tampilan.
+  var sesudah = {
+    doLogin: function (hasil) {
+      if (hasil && hasil.status === 'success' && hasil.token) {
+        tokenBaru = hasil.token;
+        try { localStorage.setItem('sim_sesi', hasil.token); } catch (e) { /* abaikan */ }
+        delete hasil.token; // token tidak ikut ke tampilan (agar tidak tersimpan di sessionStorage)
+      }
+      return hasil;
     }
   };
 
@@ -23,13 +52,13 @@
       method: 'POST',
       // text/plain: permintaan "sederhana", tidak perlu preflight (lebih cepat di HP)
       headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-      body: JSON.stringify({ fn: nama, args: args }),
+      body: JSON.stringify({ fn: nama, args: args, token: tokenSesi() }),
       signal: kontrol.signal
     }).then(function (r) {
       clearTimeout(timer);
       return r.json();
     }).then(function (j) {
-      if (j && j.ok) return j.data;
+      if (j && j.ok) return sesudah[nama] ? sesudah[nama](j.data) : j.data;
       throw new Error((j && j.message) || 'Server tidak memberi jawaban.');
     }).catch(function (e) {
       clearTimeout(timer);
@@ -51,7 +80,8 @@
           var args = Array.prototype.slice.call(arguments);
           var janji;
           try {
-            janji = lokal[nama] ? Promise.resolve(lokal[nama].apply(null, args)) : panggilServer(nama, args);
+            var hasilLokal = lokal[nama] ? lokal[nama].apply(null, args) : undefined;
+            janji = hasilLokal !== undefined ? Promise.resolve(hasilLokal) : panggilServer(nama, args);
           } catch (e) { janji = Promise.reject(e); }
           // Bentuk then(a, b): galat di dalam handler sukses tidak ikut memanggil handler gagal.
           janji.then(

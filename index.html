@@ -5332,7 +5332,7 @@
     kartu.querySelectorAll('[data-preset]').forEach(function (b) {
       b.addEventListener('click', function () { isiForm(Object.assign({}, DEF, PRESET[b.getAttribute('data-preset')], { bgMode: bacaForm().bgMode === 'gambar' && gambarLatar ? 'gambar' : (PRESET[b.getAttribute('data-preset')].bgMode || 'solid') })); pratinjau(); });
     });
-    document.getElementById('tmBtnSimpan').addEventListener('click', simpan);
+    document.getElementById('tmBtnSimpan').addEventListener('click', function () { simpan(); });
     document.getElementById('tmBtnBatal').addEventListener('click', function () { isiForm(tersimpan); terapkan(tersimpan, gambarLatar); });
     document.getElementById('tmBtnBawaan').addEventListener('click', kembalikanBawaan);
     document.getElementById('tmBtnGambar').addEventListener('click', function () { document.getElementById('tmFileGambar').click(); });
@@ -5364,7 +5364,7 @@
 
   function pratinjau() { terapkan(bacaForm(), gambarLatar); }
 
-  function simpan() {
+  function simpan(pesanKhusus) {
     var t = bacaForm();
     var btn = document.getElementById('tmBtnSimpan');
     btn.disabled = true;
@@ -5372,7 +5372,7 @@
       btn.disabled = false;
       if (res.status === 'success') {
         tersimpan = Object.assign({}, DEF, t);
-        Swal.fire({ title: 'Tersimpan', text: res.message, icon: 'success', timer: 1500, showConfirmButton: false });
+        Swal.fire({ title: 'Tersimpan', text: (typeof pesanKhusus === 'string' && pesanKhusus) ? pesanKhusus : res.message, icon: 'success', timer: (typeof pesanKhusus === 'string' && pesanKhusus) ? 2500 : 1500, showConfirmButton: false });
       } else Swal.fire({ title: 'Gagal', text: res.message, icon: 'error' });
     }).withFailureHandler(function (err) {
       btn.disabled = false;
@@ -5425,7 +5425,8 @@
           document.getElementById('tm_bgMode').value = 'gambar';
           document.getElementById('tmInfoGambar').textContent = 'Gambar latar sudah diunggah.';
           pratinjau();
-          Swal.fire({ title: 'Berhasil', text: 'Gambar tersimpan. Klik Simpan Tampilan agar dipakai semua pengguna.', icon: 'success' });
+          // Langsung simpan pengaturan tampilan (jenis latar = gambar) supaya berlaku untuk semua pengguna & perangkat.
+          simpan('Gambar latar tersimpan dan sudah dipakai semua pengguna.');
         } else Swal.fire({ title: 'Gagal', text: res.message, icon: 'error' });
       }).withFailureHandler(function (err) {
         Swal.fire({ title: 'Gagal', text: err.message || 'Gambar gagal disimpan.', icon: 'error' });

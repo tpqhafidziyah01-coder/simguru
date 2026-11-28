@@ -453,6 +453,21 @@
 </script>
 
 
+<script>
+// Aplikasi Median (Android): izin lokasi harus diminta lewat jembatan Median saat aplikasi dibuka. Di browser biasa tidak berpengaruh.
+(function () {
+  function minta() {
+    try {
+      var g = window.median && window.median.android && window.median.android.geoLocation;
+      if (g && typeof g.promptLocationServices === 'function') { g.promptLocationServices(); return true; }
+    } catch (e) { /* abaikan */ }
+    return false;
+  }
+  window.mintaIzinLokasiMedian = minta;
+  var n = 0, t = setInterval(function () { if (minta() || ++n > 20) clearInterval(t); }, 500); // jembatan Median bisa siap sedikit terlambat
+})();
+</script>
+
   <!-- AUTH SECTION (LOGIN & REGISTRASI) -->
   <div id="authWrapper">
     <!-- Login Card -->
@@ -1991,6 +2006,7 @@
     }
 
     function gunakanLokasiSaatIni() {
+      if (window.mintaIzinLokasiMedian) window.mintaIzinLokasiMedian();
       if (!navigator.geolocation) {
         Swal.fire({ title: 'Tidak Didukung', text: 'Browser ini tidak mendukung GPS.', icon: 'error' });
         return;
@@ -2530,6 +2546,7 @@
     // TAMBAHAN: helper untuk mengambil koordinat GPS perangkat sebelum absen.
     // Jika GPS tidak aktif/izin ditolak, absen tidak dilanjutkan dan pesan error ditampilkan.
     function ambilLokasiGps(onSukses, onGagal, onCobaUlang) {
+      if (window.mintaIzinLokasiMedian) window.mintaIzinLokasiMedian();
       if (!navigator.geolocation) {
         onGagal("Perangkat/browser Anda tidak mendukung GPS.");
         return;
@@ -2554,6 +2571,8 @@
           if (err2.code === err2.PERMISSION_DENIED) pesan = "Izin lokasi ditolak. Aktifkan izin lokasi untuk browser ini lalu coba lagi.";
           else if (err2.code === err2.POSITION_UNAVAILABLE) pesan = "Lokasi GPS tidak tersedia. Pastikan GPS perangkat aktif dan coba di area terbuka.";
           else if (err2.code === err2.TIMEOUT) pesan = "Waktu pengambilan lokasi GPS habis. Pastikan GPS aktif, coba di area terbuka, lalu coba lagi.";
+          // Kode diagnosa singkat (1 = izin ditolak, 2 = lokasi tidak tersedia, 3 = waktu habis) untuk membantu mencari penyebab di HP.
+          pesan += ' [kode ' + err2.code + (window.median ? ', aplikasi Median' : ', browser') + ']';
           onGagal(pesan);
         });
       });

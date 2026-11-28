@@ -2018,7 +2018,7 @@
           document.getElementById('lokasiLng').value = pos.coords.longitude;
           Swal.close();
         },
-        () => Swal.fire({ title: 'Gagal', text: 'Tidak bisa mengambil lokasi. Pastikan GPS aktif dan izin lokasi diberikan.', icon: 'error' }),
+        err => Swal.fire({ title: 'Gagal', text: 'Tidak bisa mengambil lokasi. Pastikan GPS aktif dan izin lokasi diberikan. [kode ' + (err && err.code !== undefined ? err.code : '?') + (window.median ? ', aplikasi Median' : ', browser') + ']', icon: 'error' }),
         { enableHighAccuracy: true, timeout: 10000 }
       );
     }
